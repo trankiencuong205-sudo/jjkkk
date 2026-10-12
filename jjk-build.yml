@@ -1,0 +1,39 @@
+name: Build mod
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Giai nen project
+        run: unzip -q -o ./jjk-mod*.zip
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.2.0"
+
+      - name: Build
+        working-directory: jjk-mod
+        run: gradle build --no-daemon 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
+
+      - name: Hien loi
+        if: failure()
+        working-directory: jjk-mod
+        run: |
+          msg=$(grep -E "error:|What went wrong|Could not|FAILED" build.log | head -40 | tr '\n' ' ' | cut -c1-3000)
+          echo "::error::$msg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jjk-jar
+          path: jjk-mod/build/libs/jujutsu-cursed-0.1.0.jar
